@@ -15,10 +15,11 @@ void setup() {
   Serial.begin(115200);
   connect_wifi();
   pinMode(21,INPUT_PULLUP);
+  Serial.println("V2.102....-=");
 }
 void loop() {
   while(digitalRead(21)==HIGH){
-    Serial.println("V2");
+    Serial.println("V2.102");
   }
   if (digitalRead(21)==LOW) 
   { 

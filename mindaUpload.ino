@@ -7,7 +7,7 @@
 const char * ssid = "AnhHuong";
 const char * password = "00000000";
 
-#define URL_fw_Bin "https://raw.githubusercontent.com/Tuananh98kthd/mindaUpdate/main/Minda.bin"
+#define URL_fw_Bin "https://raw.githubusercontent.com/Tuananh98kthd/Minda_project/master/mindaUpload.ino.esp32.bin"
 
 
 void setup() {
@@ -15,11 +15,11 @@ void setup() {
   Serial.begin(115200);
   connect_wifi();
   pinMode(21,INPUT_PULLUP);
-  Serial.println("V2.102....-=");
+  Serial.println("Tuan anh lam moi");
 }
 void loop() {
   while(digitalRead(21)==HIGH){
-    Serial.println("V2.102");
+    Serial.println("v5.0");
   }
   if (digitalRead(21)==LOW) 
   { 

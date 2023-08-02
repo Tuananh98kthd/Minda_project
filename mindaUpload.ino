@@ -15,8 +15,8 @@
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
-//#define API_KEY "pxHquPLdl2Eq0nYDZJUZ9R7wMk0APJyRmAC1qKfx"
-//#define DATABASE_URL "https://minda-7b7cc-default-rtdb.firebaseio.com/"
+#define API_KEY_BACKUP "pxHquPLdl2Eq0nYDZJUZ9R7wMk0APJyRmAC1qKfx"
+#define DATABASE_URL_BACKUP "https://minda-7b7cc-default-rtdb.firebaseio.com/"
 #define API_KEY "8fddd102db5d49a8f218cd9e613ea6c115cc5b6f"
 #define DATABASE_URL "https://minda-4c2d2-default-rtdb.firebaseio.com/"
 #define URL_fw_Bin "https://raw.githubusercontent.com/Tuananh98kthd/Minda_project/master/mindaUpload.ino.esp32.bin"
@@ -37,7 +37,7 @@ int led[4]={led0,led1,led2,led3};
 int numSTT[36];
 int count_call;
 int count,count_clear;
-String _data;
+String Update_signal,_data;
 FirebaseJson json;
 String LineSTT;
 void smartconfig();
@@ -47,6 +47,8 @@ int findsubstr(String mother, String sub);
 void Firebase_clear();
 void clearStation();
 void firmwareUpdate();
+void cfgFirebase1();
+void cfgFirebase2();
 void setup() {
 lcd.begin(20, 4);
 lcd.clear();
@@ -71,15 +73,7 @@ else
   Serial.print("PASS = ");
   Serial.println(pss);
 }
-if((digitalRead(S1)==LOW)&&(digitalRead(S2)==LOW)&&(digitalRead(S2)==LOW)){
-  smartconfig();
-  ssid = EEPROM.readString(0);
-  Serial.print("SSID = ");
-  Serial.println(ssid);
-  pss = EEPROM.readString(20);
-  Serial.print("PASS = ");
-  Serial.println(pss);
-}
+
 WiFi.begin(ssid.c_str(), pss.c_str());
 while(WiFi.status() != WL_CONNECTED) 
 {
@@ -92,29 +86,28 @@ while(WiFi.status() != WL_CONNECTED)
     SetWifi();
 }
 Serial.println("Connect Success");
-
 lcd.clear();
 lcd.setCursor(0,0);
 lcd.print("Wifi is Connected");
 lcd.setCursor(0,1);
 lcd.print(WiFi.localIP());
 Serial.println("Success");
-config.api_key = API_KEY;
-config.token_status_callback = tokenStatusCallback;
-config.database_url = DATABASE_URL;
-config.signer.tokens.legacy_token = "YzU3RDxkvdwXvTRVtuIFlYdu7hFQV3onD8VCtS0l";
-fbdo.setResponseSize(2048);   
-Firebase.begin(&config, &auth);
-Firebase.reconnectWiFi(true);
-Firebase.setDoubleDigits(5);
-config.timeout.serverResponse = 10 * 1000; 
+cfgFirebase1();
+delay(1000);
+Serial.println("Read Firebase 1");
+Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, "Update", &Update_signal ) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+if(Update_signal=="1234"){
+  Serial.println("update firmware V2.0");
+  firmwareUpdate();
+}
+Serial.println("Start Primary Firebase");
+cfgFirebase2();
 WiFi.setAutoReconnect(true); 
 delay(100);
 clearStation();
 if((digitalRead(S1)==LOW)&&(digitalRead(S2)==LOW)){
   Serial.println("update firmware V2.0");
   firmwareUpdate();
-  //Serial.println("update successfully");
 }
 }
 void loop() 
@@ -124,10 +117,12 @@ void loop()
   if(Firebase.ready())
   {
   Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, Station, &LineSTT ) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-  } else {
-      Serial.println("Khong vao dc Firebase");
-  }
+  } 
   Serial.println();
+  if(LineSTT=="12345678"){
+  Serial.println("update firmware");
+  firmwareUpdate();
+  }
   count_call=0;
   for(int i=1;i<36;i++)
   {
@@ -309,4 +304,26 @@ void firmwareUpdate() {
     Serial.println("HTTP_UPDATE_OK");
     break;
   }
+}
+void cfgFirebase1(){
+config.api_key = API_KEY_BACKUP;
+config.token_status_callback = tokenStatusCallback;
+config.database_url = DATABASE_URL_BACKUP;
+config.signer.tokens.legacy_token = "YzU3RDxkvdwXvTRVtuIFlYdu7hFQV3onD8VCtS0l";
+fbdo.setResponseSize(2048);   
+Firebase.begin(&config, &auth);
+Firebase.reconnectWiFi(true);
+Firebase.setDoubleDigits(5);
+config.timeout.serverResponse = 10 * 1000; 
+}
+void cfgFirebase2(){
+config.api_key = API_KEY;
+config.token_status_callback = tokenStatusCallback;
+config.database_url = DATABASE_URL;
+config.signer.tokens.legacy_token = "YzU3RDxkvdwXvTRVtuIFlYdu7hFQV3onD8VCtS0l";
+fbdo.setResponseSize(2048);   
+Firebase.begin(&config, &auth);
+Firebase.reconnectWiFi(true);
+Firebase.setDoubleDigits(5);
+config.timeout.serverResponse = 10 * 1000; 
 }

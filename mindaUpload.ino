@@ -101,7 +101,7 @@ if(Update_signal=="1234"){
   firmwareUpdate();
 }
 Serial.println("Start Primary Firebase");
-cfgFirebase2();
+if(Update_signal!="8888")cfgFirebase2();
 WiFi.setAutoReconnect(true); 
 delay(100);
 clearStation();

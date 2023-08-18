@@ -130,6 +130,7 @@ else
     Serial.print("Line khong hop le");
     Serial.println(numLine);
 }
+Stt1_T=-1;Stt2_T=-1;Stt3_T=-1;
 }
 void loop() 
 {

@@ -20,7 +20,7 @@ String Update_signal;
 #define DATABASE_URL_BACKUP "https://minda-7b7cc-default-rtdb.firebaseio.com/"
 #define API_KEY "8fddd102db5d49a8f218cd9e613ea6c115cc5b6f"
 #define DATABASE_URL "https://minda-4c2d2-default-rtdb.firebaseio.com/"
-#define URL_fw_Bin "https://raw.githubusercontent.com/Tuananh98kthd/Minda_project/master/mindaUpload.ino.esp32.bin"
+#define URL_fw_Bin "https://raw.githubusercontent.com/Tuananh98kthd/Minda_project/master/mindaSlaveUpdate/mindaSlaveUpdate.ino.esp32.bin"
 #define sw7 34
 #define sw6 35
 #define sw5 32
@@ -41,12 +41,11 @@ String Update_signal;
 #define EEPROM_SIZE 128 
 String ssid;                        //string variable to store ssid
 String pss; 
-String Stt_S1,Stt_S2,Stt_S3;
+String Link1 = "Station 1/";
+String Link2 = "Station 2/";
+String Link3 = "Station 3/";
 static String g_Stt[3];
-int stt1,stt2,stt3;
-int on1,on2,on3,off1,off2,off3;
-static int g_On[3] = {0};
-static int g_Off[3] = {0};
+String Line[36]={"Line0","Line01","Line02","Line03","Line04","Line05","Line06","Line07","Line08","Line09","Line10","Line11","Line12","Line13","Line14","Line15","Line16","Line17","Line18","Line19","Line20","Line21","Line22","Line23","Line24","Line25","Line26","Line27","Line28","Line29","Line30","Line31","Line32","Line33","Line34","Line35"};
 int sw[8]={sw0,sw1,sw2,sw3,sw4,sw5,sw6,sw7};
 int led[4]={led0,led1,led2,led3};
 FirebaseJson json;
@@ -55,21 +54,24 @@ void cfgFirebase1();
 void firmwareUpdate();
 void Alarm(int a);
 void SetWifi();
-void kt1();
-void kt2();
-void kt3();
+void hienthiLed();
 int findsubstr(String mother, String sub);
+int Stt1_T=-1,Stt1_S,Stt2_T=-1,Stt2_S,Stt3_T=-1,Stt3_S,STT1,STT2,STT3;
+String Stt1,Stt2,Stt3;
+int W1,W2,W3;
 int count;
 byte numLine;
 String _data;
 void setup() {
 for(int i=0;i<8;i++)pinMode(sw[i],INPUT_PULLUP);
-for(int i=0;i<4;i++)pinMode(led[i],OUTPUT);
+for(int i=1;i<4;i++)pinMode(led[i],INPUT);
 pinMode(ledAlarm,OUTPUT);
 digitalWrite(ledAlarm,HIGH);
 pinMode(S1,INPUT_PULLUP);
-pinMode(S2,INPUT_PULLUP);
-pinMode(S3,INPUT_PULLUP);
+pinMode(S2,INPUT);
+pinMode(S3,INPUT);
+pinMode(4,INPUT_PULLUP);
+pinMode(5,INPUT_PULLUP);
 Serial.begin(115200);
 if (!EEPROM.begin(EEPROM_SIZE))
 {
@@ -109,43 +111,108 @@ if(Update_signal=="1234"){
 Serial.println("Start Primary Firebase");
 if(Update_signal!="8888")cfgFirebase2();
 WiFi.setAutoReconnect(true); 
-}
-
-void loop() 
+for(int i=5;i>=0;i--)
 {
-if((digitalRead(S1)==HIGH)&&(digitalRead(S2)==HIGH)&&(digitalRead(S3)==HIGH))SetWifi();
-  if((digitalRead(S1)==LOW)||(digitalRead(S2)==LOW)||(digitalRead(S3)==LOW))
+  if(digitalRead(sw[i])==LOW)
   {
-    digitalWrite(led0,LOW);
-    digitalWrite(ledAlarm,LOW);
-  }
-  else
-  {
-    digitalWrite(led0,HIGH);
-    digitalWrite(ledAlarm,HIGH);   
-  }
-
-  for(int i=5;i>=0;i--){
-    if(digitalRead(sw[i])==LOW){
     numLine|=((1<<i));
-    }
   }
-  if((numLine<36)&&(numLine>0))
-  {
-  kt1();
-  kt2();
-  kt3();
-  }
-  else 
-  {
+}
+if((numLine<36)&&(numLine>0))
+{
+    Link1 += Line[numLine];
+    Link2 += Line[numLine];
+    Link3 += Line[numLine];
+}
+else 
+{
     Alarm(5);
     Serial.print("Line khong hop le");
     Serial.println(numLine);
-  }
-  if(!WiFi.isConnected()){
-    Alarm(7);
-    Serial.println("Mat ket noi");
-  }
+}
+}
+void loop() 
+{
+if((digitalRead(S1)==HIGH)&&(digitalRead(S2)==HIGH)&&(digitalRead(S3)==HIGH))SetWifi();
+hienthiLed();
+if(digitalRead(S1)==LOW)Stt1_T=1; else Stt1_T=0;
+if(digitalRead(S2)==LOW)Stt2_T=1; else Stt2_T=0;
+if(digitalRead(S3)==LOW)Stt3_T=1; else Stt3_T=0;
+STT1=Stt1_T-Stt1_S;
+STT2=Stt2_T-Stt2_S;
+STT3=Stt3_T-Stt3_S;
+if(digitalRead(S1)==LOW)
+{
+delay(1000);
+if(digitalRead(S1)==LOW)Stt1_S=1; 
+}else Stt1_S=0;
+if(digitalRead(S2)==LOW)
+{
+delay(1000);
+if(digitalRead(S2)==LOW)Stt2_S=1;
+} else Stt2_S=0;
+
+if(digitalRead(S3)==LOW){
+ delay(1000);
+ if(digitalRead(S3)==LOW) Stt3_S=1;
+ } else Stt3_S=0;
+ 
+if(STT1==(1)||(W1==1)){
+  W1=1;
+  Serial.printf("Set string1... %s\n", Firebase.RTDB.setString(&fbdo, Link1, "1") ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  delay(1000);
+  Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, Link1, &Stt1 ) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  if(Stt1=="1")W1=0;
+  delay(1000);
+} 
+
+if(STT1==(-1)||(W1==-1)){
+  W1=-1;
+  Serial.printf("Set string1... %s\n", Firebase.RTDB.setString(&fbdo, Link1, "0") ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  delay(1000);
+  Serial.printf("Get string1... %s\n", Firebase.RTDB.getString(&fbdo, Link1, &Stt1 ) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  if(Stt1=="0")W1=0;
+  delay(1000);
+}
+if(STT2==(1)||(W2==1)){
+  W2=1;
+  Serial.printf("Set string2... %s\n", Firebase.RTDB.setString(&fbdo, Link2, "1") ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  delay(1000);
+  Serial.printf("Get string2... %s\n", Firebase.RTDB.getString(&fbdo, Link2, &Stt2 ) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  if(Stt2=="1")W2=0;
+  delay(1000);
+} 
+if(STT2==(-1)||(W2==-1)){
+  W2=-1;
+  Serial.printf("Set string2... %s\n", Firebase.RTDB.setString(&fbdo, Link2, "0") ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  delay(1000);
+  Serial.printf("Get string2... %s\n", Firebase.RTDB.getString(&fbdo, Link2, &Stt2 ) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  if(Stt2=="0")W2=0;
+  delay(1000);
+}
+if((STT3==1)||(W3==1)){
+  W3=1;
+  Serial.printf("Set string3... %s\n", Firebase.RTDB.setString(&fbdo, Link3, "1") ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  delay(1000);
+  Serial.printf("Get string3... %s\n", Firebase.RTDB.getString(&fbdo, Link3, &Stt3 ) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  if(Stt3=="1")W3=0;
+  delay(1000);
+} 
+if(STT3==(-1)||(W3==-1)){
+  W3=-1;
+  Serial.printf("Set string3... %s\n", Firebase.RTDB.setString(&fbdo, Link3, "0") ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  delay(1000);
+  Serial.printf("Get string3... %s\n", Firebase.RTDB.getString(&fbdo, Link3, &Stt3 ) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
+  if(Stt3=="0")W3=0;
+  delay(1000);
+}
+
+if(!WiFi.isConnected())
+{
+  Alarm(7);
+  Serial.println("Mat ket noi");
+}
+
 }
 
 int findsubstr(String mother, String sub)
@@ -213,169 +280,7 @@ void Alarm(int a){
 
   }
 }
-void kt1()
-{
-  if (digitalRead(S1) == LOW)off1 = 0;
-  if (digitalRead(S1) == HIGH)on1 = 0;
-  if ((digitalRead(S1) == LOW) && (on1 == 0))
-  {
-    if (Firebase.ready())
-    {
-    Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, "Station1", &Stt_S1) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-    }
-    else 
-    {
-      Serial.println("Khong vao dc Firebase");
-    }
-    if (Stt_S1 != NULL)
-    {
-      if (Stt_S1[numLine] == '1')
-      {
-        on1 = 1;
-      }
-      else
-      {
-        Stt_S1[numLine] = '1';
-        Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo, "Station1", Stt_S1) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-      }
-    }
-  }
 
-  if ((digitalRead(S1) == HIGH) && (off1 == 0))
-  {
-    if (Firebase.ready())
-    {
-    Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, "Station1", &Stt_S1) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-    Serial.println(Stt_S1);
-    }
-    else 
-    {
-      Serial.println("Khong vao dc Firebase");
-    }
-    if (Stt_S1 != NULL)
-    {
-      if (Stt_S1[numLine] == '0')
-      {
-        off1 = 1;
-      }
-      else
-      {
-        Stt_S1[numLine] = '0';
-        Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo, "Station1", Stt_S1) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-        Serial.println(Stt_S1);
-      }
-    }
-  }
-}
-void kt2()
-{
-  if (digitalRead(S2) == LOW)off2 = 0;
-  if (digitalRead(S2) == HIGH)on2 = 0;
-  if ((digitalRead(S2) == LOW) && (on2 == 0))
-  {
-    if (Firebase.ready())
-    {
-    Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, "Station2", &Stt_S2) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-    }
-    else 
-    {
-      Serial.println("Khong vao dc Firebase");
-    }
-    if (Stt_S2 != NULL)
-    {
-      if (Stt_S2[numLine] == '1')
-      {
-        on2 = 1;
-      }
-      else
-      {
-        Stt_S2[numLine] = '1';
-        Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo, "Station2", Stt_S2) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-      }
-    }
-  }
-
-  if ((digitalRead(S2) == HIGH) && (off2 == 0))
-  {
-    if (Firebase.ready())
-    {
-    Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, "Station2", &Stt_S2) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-    Serial.println(Stt_S2);
-    }
-    else 
-    {
-      Serial.println("Khong vao dc Firebase");
-    }
-    if (Stt_S2 != NULL)
-    {
-      if (Stt_S2[numLine] == '0')
-      {
-        off2 = 1;
-      }
-      else
-      {
-        Stt_S2[numLine] = '0';
-        Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo, "Station2", Stt_S2) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-        Serial.println(Stt_S2);
-      }
-    }
-  }
-}
-
-void kt3()
-{
-  if (digitalRead(S3) == LOW)off3 = 0;
-  if (digitalRead(S3) == HIGH)on3 = 0;
-  if ((digitalRead(S3) == LOW) && (on3 == 0))
-  {
-    if (Firebase.ready())
-    {
-    Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, "Station3", &Stt_S3) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-    }
-    else 
-    {
-      Serial.println("Khong vao dc Firebase");
-    }
-    if (Stt_S3 != NULL)
-    {
-      if (Stt_S3[numLine] == '1')
-      {
-        on3 = 1;
-      }
-      else
-      {
-        Stt_S3[numLine] = '1';
-        Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo, "Station3", Stt_S3) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-      }
-    }
-  }
-
-  if ((digitalRead(S3) == HIGH) && (off3 == 0))
-  {
-    if (Firebase.ready())
-    {
-    Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, "Station3", &Stt_S3) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-    Serial.println(Stt_S3);
-    }
-    else 
-    {
-      Serial.println("Khong vao dc Firebase");
-    }
-    if (Stt_S3 != NULL)
-    {
-      if (Stt_S3[numLine] == '0')
-      {
-        off3 = 1;
-      }
-      else
-      {
-        Stt_S3[numLine] = '0';
-        Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo, "Station3", Stt_S3) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-        Serial.println(Stt_S3);
-      }
-    }
-  }
-}
 void cfgFirebase1(){
 config.api_key = API_KEY_BACKUP;
 config.token_status_callback = tokenStatusCallback;
@@ -414,5 +319,17 @@ void firmwareUpdate() {
   case HTTP_UPDATE_OK:
     Serial.println("HTTP_UPDATE_OK");
     break;
+  }
+}
+void hienthiLed(){
+    if((digitalRead(S1)==LOW)||(digitalRead(S2)==LOW)||(digitalRead(S3)==LOW))
+  {
+    digitalWrite(led0,LOW);
+    digitalWrite(ledAlarm,LOW);
+  }
+  else
+  {
+    digitalWrite(led0,HIGH);
+    digitalWrite(ledAlarm,HIGH);   
   }
 }

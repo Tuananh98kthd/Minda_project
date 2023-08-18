@@ -1,8 +1,11 @@
+#include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
 #include "cert.h"
+#include <ESPmDNS.h>
+#include <ArduinoOTA.h>
 #include <Firebase_ESP_Client.h>
 #include <addons/TokenHelper.h>
 #include <addons/RTDBHelper.h>
@@ -15,6 +18,7 @@
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
+String Update_signal;
 #define API_KEY_BACKUP "pxHquPLdl2Eq0nYDZJUZ9R7wMk0APJyRmAC1qKfx"
 #define DATABASE_URL_BACKUP "https://minda-7b7cc-default-rtdb.firebaseio.com/"
 #define API_KEY "8fddd102db5d49a8f218cd9e613ea6c115cc5b6f"
@@ -32,23 +36,25 @@ FirebaseConfig config;
 LiquidCrystal lcd(14, 27, 32, 33, 25, 26);
 String ssid;
 String pss; 
+String Line[36]={"Line0","Line01","Line02","Line03","Line04","Line05","Line06","Line07","Line08","Line09","Line10","Line11","Line12","Line13","Line14","Line15","Line16","Line17","Line18","Line19","Line20","Line21","Line22","Line23","Line24","Line25","Line26","Line27","Line28","Line29","Line30","Line31","Line32","Line33","Line34","Line35"};
+String LineSTT_Value[36];
+String LineSTT;
 String Station;
 int led[4]={led0,led1,led2,led3};
 int numSTT[36];
 int count_call;
 int count,count_clear;
-String Update_signal,_data;
+String _data;
 FirebaseJson json;
-String LineSTT;
+void cfgFirebase2();
+void cfgFirebase1();
+void firmwareUpdate();
 void smartconfig();
 void Alarm(int a);
 void SetWifi();
 int findsubstr(String mother, String sub);
 void Firebase_clear();
-void clearStation();
-void firmwareUpdate();
-void cfgFirebase1();
-void cfgFirebase2();
+
 void setup() {
 lcd.begin(20, 4);
 lcd.clear();
@@ -73,7 +79,15 @@ else
   Serial.print("PASS = ");
   Serial.println(pss);
 }
-
+if((digitalRead(S1)==LOW)&&(digitalRead(S2)==LOW)&&(digitalRead(S2)==LOW)){
+  smartconfig();
+  ssid = EEPROM.readString(0);
+  Serial.print("SSID = ");
+  Serial.println(ssid);
+  pss = EEPROM.readString(20);
+  Serial.print("PASS = ");
+  Serial.println(pss);
+}
 WiFi.begin(ssid.c_str(), pss.c_str());
 while(WiFi.status() != WL_CONNECTED) 
 {
@@ -86,6 +100,7 @@ while(WiFi.status() != WL_CONNECTED)
     SetWifi();
 }
 Serial.println("Connect Success");
+
 lcd.clear();
 lcd.setCursor(0,0);
 lcd.print("Wifi is Connected");
@@ -102,38 +117,40 @@ if(Update_signal=="1234"){
 }
 Serial.println("Start Primary Firebase");
 if(Update_signal!="8888")cfgFirebase2();
-WiFi.setAutoReconnect(true); 
-delay(100);
-clearStation();
-if((digitalRead(S1)==LOW)&&(digitalRead(S2)==LOW)){
-  Serial.println("update firmware V2.0");
-  firmwareUpdate();
-}
+WiFi.setAutoReconnect(true);
+Firebase_clear();
 }
 void loop() 
 {
   String Message="Line: ";
-  void checkStation();
+  if(digitalRead(S1)==LOW)Station="Station 1";
+  if(digitalRead(S2)==LOW)Station="Station 2";
+  if(digitalRead(S3)==LOW)Station="Station 3";
+  if((digitalRead(S3)==HIGH)&&(digitalRead(S2)==HIGH)&&(digitalRead(S3)==HIGH))Station="Station 1";
   if(Firebase.ready())
   {
   Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, Station, &LineSTT ) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-  } 
-  Serial.println();
-  if(LineSTT=="12345678"){
-  Serial.println("update firmware");
-  firmwareUpdate();
+  } else {
+      Serial.println("Khong vao dc Firebase");
   }
-  count_call=0;
   for(int i=1;i<36;i++)
   {
-    if((LineSTT[i]!='0')&&(LineSTT[i]!=NULL))
+    LineSTT_Value[i] = LineSTT.substring(findsubstr(LineSTT,Line[i])+Line[i].length()+3,findsubstr(LineSTT,Line[i])+Line[i].length()+4 );
+    Serial.print(LineSTT_Value[i]);Serial.print("-");
+  }
+  Serial.println();
+  for(int i=1;i<36;i++)
+  {
+    numSTT[i]=0;
+    if(LineSTT_Value[i]=="1")
     {
       Message+= String(i);
       Message+= " ";
       count_call++;
+      numSTT[i]=1;
     }
   }
-  if((count_clear%3)==0) lcd.clear();
+  lcd.clear();
   if(WiFi.isConnected()==true)
   {
    lcd.setCursor(0,0);
@@ -164,7 +181,7 @@ void loop()
   count_call=0;
   Serial.println(Message);
   count_clear++;
-  delay(1000);
+  delay(2000);
 }
 
 
@@ -212,6 +229,17 @@ void SetWifi()
   }
 }
 
+void set_new()
+{
+  for(int i=1;i<36;i++){
+    if(Firebase.ready()){
+      for(int i=1;i<36;i++){
+        Firebase.RTDB.setString(&fbdo,"Station 3/"+Line[i],0);
+      }
+    }
+  }
+  while(1);
+  }
 
 void Alarm(int a)
 {
@@ -268,41 +296,25 @@ void smartconfig()
   delay(100);
   Serial.println("WiFi Connected");
 }
-
-void checkStation()
+void Firebase_clear()
 {
-  if(digitalRead(S1)==LOW)Station="Station1";
-  if(digitalRead(S2)==LOW)Station="Station2";
-  if(digitalRead(S3)==LOW)Station="Station3";
-  if((digitalRead(S3)==HIGH)&&(digitalRead(S2)==HIGH)&&(digitalRead(S3)==HIGH))Station="Station1";
-}
-void clearStation()
-{
-  String Stt_Clear = "0000000000000000000000000000000000000";
-  if(digitalRead(S1)==LOW)Station="Station1";
-  if(digitalRead(S2)==LOW)Station="Station2";
-  if(digitalRead(S3)==LOW)Station="Station3";
-  if((digitalRead(S3)==HIGH)&&(digitalRead(S2)==HIGH)&&(digitalRead(S3)==HIGH))Station="Station1";
-  if(Firebase.ready())Serial.printf("Get string... %s\n", Firebase.RTDB.setString(&fbdo, Station, Stt_Clear) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-}
+  if(digitalRead(S1)==LOW)Station="Station 1/";
+  if(digitalRead(S2)==LOW)Station="Station 2/";
+  if(digitalRead(S3)==LOW)Station="Station 3/";
+  if((digitalRead(S3)==HIGH)&&(digitalRead(S2)==HIGH)&&(digitalRead(S3)==HIGH))Station="Station 1/";
+  Serial.println("clear");
 
-
-void firmwareUpdate() {
-  WiFiClientSecure client;
-  client.setCACert(rootCACertificate);
-  t_httpUpdate_return ret = httpUpdate.update(client, URL_fw_Bin);
-  switch (ret) {
-  case HTTP_UPDATE_FAILED:
-    Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-    break;
-
-  case HTTP_UPDATE_NO_UPDATES:
-    Serial.println("HTTP_UPDATE_NO_UPDATES");
-    break;
-
-  case HTTP_UPDATE_OK:
-    Serial.println("HTTP_UPDATE_OK");
-    break;
+  if(Firebase.ready())
+  for(int numLine=1; numLine<36; numLine++)
+  {
+    if(numSTT[numLine]==1)
+    {
+      Firebase.RTDB.setString(&fbdo, Station+Line[numLine], "0")? "ok" : fbdo.errorReason().c_str(); 
+      Serial.println(Station+Line[numLine]);  
+    }
+    
+    //Serial.println(fbdo.errorReason().c_str()) ;
+      /* code */
   }
 }
 void cfgFirebase1(){
@@ -326,4 +338,22 @@ Firebase.begin(&config, &auth);
 Firebase.reconnectWiFi(true);
 Firebase.setDoubleDigits(5);
 config.timeout.serverResponse = 10 * 1000; 
+}
+void firmwareUpdate() {
+  WiFiClientSecure client;
+  client.setCACert(rootCACertificate);
+  t_httpUpdate_return ret = httpUpdate.update(client, URL_fw_Bin);
+  switch (ret) {
+  case HTTP_UPDATE_FAILED:
+    Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+    break;
+
+  case HTTP_UPDATE_NO_UPDATES:
+    Serial.println("HTTP_UPDATE_NO_UPDATES");
+    break;
+
+  case HTTP_UPDATE_OK:
+    Serial.println("HTTP_UPDATE_OK");
+    break;
+  }
 }

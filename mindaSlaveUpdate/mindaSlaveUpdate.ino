@@ -20,7 +20,7 @@ String Update_signal;
 #define DATABASE_URL_BACKUP "https://minda-7b7cc-default-rtdb.firebaseio.com/"
 #define API_KEY "8fddd102db5d49a8f218cd9e613ea6c115cc5b6f"
 #define DATABASE_URL "https://minda-4c2d2-default-rtdb.firebaseio.com/"
-#define URL_fw_Bin "https://raw.githubusercontent.com/Tuananh98kthd/Minda_project/master/mindaSlaveUpdate/mindaSlaveUpdate.ino.esp32.bin"
+#define URL_fw_Bin "https://raw.githubusercontent.com/Tuananh98kthd/Minda_project/master/mindaSlaveUpdate.ino.esp32.bin"
 #define sw7 34
 #define sw6 35
 #define sw5 32
